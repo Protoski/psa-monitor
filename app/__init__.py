@@ -17,14 +17,21 @@ def create_app():
                 template_folder='../templates',
                 static_folder='../static')
     
+    # Detectar si estamos en producción (Render u otro hosting)
+    is_production = os.environ.get('RENDER') or os.environ.get('DATABASE_URL', '').startswith('postgresql')
+    
     # Configuración
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=8)
     app.config['JWT_TOKEN_LOCATION'] = ['cookies', 'headers']
-    app.config['JWT_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
-    app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # Simplificado para inicio
+    
+    # Configuración de cookies para HTTPS en producción
+    app.config['JWT_COOKIE_SECURE'] = is_production
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
     app.config['JWT_COOKIE_SAMESITE'] = 'Lax'
+    app.config['JWT_ACCESS_COOKIE_NAME'] = 'access_token_cookie'
+    app.config['JWT_COOKIE_DOMAIN'] = None
     
     # Inicializar extensiones
     jwt.init_app(app)
