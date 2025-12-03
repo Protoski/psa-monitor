@@ -344,7 +344,8 @@ def obtener_usuario_por_id(user_id: int) -> Optional[Dict]:
                    ultimo_acceso, created_at
             FROM usuarios WHERE id = %s
         """, (user_id,))
-        return dict(cursor.fetchone()) if cursor.fetchone() else None
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def obtener_usuario_por_telegram(telegram_id: int) -> Optional[Dict]:
