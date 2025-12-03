@@ -3,7 +3,7 @@
 PSA Monitor - Sistema de Monitoreo de Plantas de Oxígeno PSA
 Versión 2.0
 
-Autor: ONYX INGENIERÍA
+Autor: Ing. Angel Cabral
 ================================================================================
 
 Para ejecutar:
