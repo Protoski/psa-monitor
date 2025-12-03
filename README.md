@@ -175,4 +175,4 @@ El sistema incluye un bot de Telegram para monitoreo remoto y alertas.
 
 ## Licencia
 
-Desarrollado por ONYX INGENIERÍA - Paraguay
+Desarrollado por Dggies - Paraguay
