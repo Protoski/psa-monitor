@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Plantas - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold">
+                <i class="fas fa-industry mr-2 text-primary"></i>
+                Gestión de Plantas
+            </h1>
+            <p class="text-gray-400 text-sm mt-1">{{ plantas|length }} plantas registradas</p>
+        </div>
+        {% if user.rol in ['admin'] %}
+        <a href="{{ url_for('admin.plantas_nueva') }}" 
+           class="px-4 py-2 bg-primary hover:bg-blue-600 rounded-lg transition">
+            <i class="fas fa-plus mr-2"></i> Nueva Planta
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-dark-800 rounded-xl p-4 mb-6">
+        <div class="flex flex-wrap gap-4">
+            <input type="text" 
+                   id="filtroNombre" 
+                   placeholder="Buscar por nombre..."
+                   class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm
+                          focus:ring-2 focus:ring-primary focus:border-primary"
+                   onkeyup="filtrarPlantas()">
+            <select id="filtroEstado" 
+                    class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm"
+                    onchange="filtrarPlantas()">
+                <option value="">Todos los estados</option>
+                <option value="activa">Activas</option>
+                <option value="inactiva">Inactivas</option>
+                <option value="mantenimiento">En mantenimiento</option>
+            </select>
+            <select id="filtroTipo" 
+                    class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm"
+                    onchange="filtrarPlantas()">
+                <option value="">Todos los tipos</option>
+                <option value="simplex">Simplex</option>
+                <option value="duplex">Duplex</option>
+                <option value="triplex">Triplex</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Tabla -->
+    <div class="bg-dark-800 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full" id="tablaPlantas">
+                <thead class="bg-dark-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Planta</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Ubicación</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Tipo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Patrimonio</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Estado</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-dark-600">
+                    {% for planta_id, planta in plantas.items() %}
+                    <tr class="hover:bg-dark-700 transition fila-planta"
+                        data-nombre="{{ planta.nombre|lower }}"
+                        data-estado="{{ planta.estado }}"
+                        data-tipo="{{ planta.tipo_instalacion }}">
+                        <td class="px-4 py-4">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 rounded-full mr-3
+                                            {% if planta.alarma %}bg-red-500 animate-pulse
+                                            {% elif planta.activa %}bg-green-500
+                                            {% else %}bg-gray-500{% endif %}"></div>
+                                <div>
+                                    <p class="font-medium">{{ planta.nombre }}</p>
+                                    {% if planta.codigo_interno %}
+                                    <p class="text-xs text-gray-400">{{ planta.codigo_interno }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm text-gray-300">
+                            {{ planta.ciudad or planta.ubicacion or '-' }}
+                            {% if planta.departamento %}
+                            <span class="text-gray-500">({{ planta.departamento }})</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-4">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                         {% if planta.tipo_instalacion == 'duplex' %}bg-purple-500/20 text-purple-400
+                                         {% elif planta.tipo_instalacion == 'triplex' %}bg-orange-500/20 text-orange-400
+                                         {% else %}bg-blue-500/20 text-blue-400{% endif %}">
+                                {{ planta.tipo_instalacion|capitalize }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-4 text-sm font-mono text-gray-400">
+                            {{ planta.numero_patrimonio or '-' }}
+                        </td>
+                        <td class="px-4 py-4">
+                            <span class="px-2 py-1 rounded text-xs
+                                         {% if planta.estado == 'activa' %}bg-green-500/20 text-green-400
+                                         {% elif planta.estado == 'mantenimiento' %}bg-yellow-500/20 text-yellow-400
+                                         {% elif planta.estado == 'inactiva' %}bg-gray-500/20 text-gray-400
+                                         {% else %}bg-red-500/20 text-red-400{% endif %}">
+                                {{ planta.estado|capitalize }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <a href="{{ url_for('dashboard.detalle_planta', planta_id=planta_id) }}" 
+                                   class="p-2 hover:bg-dark-600 rounded-lg transition" title="Ver">
+                                    <i class="fas fa-eye text-gray-400"></i>
+                                </a>
+                                {% if user.rol in ['admin', 'operador'] %}
+                                <a href="{{ url_for('admin.plantas_editar', planta_id=planta_id) }}" 
+                                   class="p-2 hover:bg-dark-600 rounded-lg transition" title="Editar">
+                                    <i class="fas fa-edit text-primary"></i>
+                                </a>
+                                {% endif %}
+                                {% if user.rol == 'admin' %}
+                                <form action="{{ url_for('admin.plantas_eliminar', planta_id=planta_id) }}" 
+                                      method="POST" class="inline"
+                                      onsubmit="return confirm('¿Eliminar la planta {{ planta.nombre }}?')">
+                                    <button type="submit" 
+                                            class="p-2 hover:bg-dark-600 rounded-lg transition" title="Eliminar">
+                                        <i class="fas fa-trash text-red-400"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not plantas %}
+        <div class="p-12 text-center">
+            <i class="fas fa-industry text-6xl text-gray-600 mb-4"></i>
+            <p class="text-gray-400">No hay plantas registradas</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filtrarPlantas() {
+    const nombre = document.getElementById('filtroNombre').value.toLowerCase();
+    const estado = document.getElementById('filtroEstado').value;
+    const tipo = document.getElementById('filtroTipo').value;
+    
+    document.querySelectorAll('.fila-planta').forEach(fila => {
+        const matchNombre = !nombre || fila.dataset.nombre.includes(nombre);
+        const matchEstado = !estado || fila.dataset.estado === estado;
+        const matchTipo = !tipo || fila.dataset.tipo === tipo;
+        
+        fila.style.display = (matchNombre && matchEstado && matchTipo) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

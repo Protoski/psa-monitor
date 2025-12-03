@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if planta and planta.id else 'Nueva' }} Planta - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4">
+    <!-- Breadcrumb -->
+    <nav class="text-sm text-gray-400 mb-4">
+        <a href="{{ url_for('admin.plantas_lista') }}" class="hover:text-primary">Plantas</a>
+        <span class="mx-2">/</span>
+        <span class="text-white">{{ 'Editar' if planta and planta.id else 'Nueva' }}</span>
+    </nav>
+    
+    <h1 class="text-2xl font-bold mb-6">
+        <i class="fas fa-industry mr-2 text-primary"></i>
+        {{ 'Editar Planta' if planta and planta.id else 'Nueva Planta' }}
+    </h1>
+    
+    <form method="POST" class="space-y-6">
+        <!-- Identificación -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-tag mr-2"></i> Identificación
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if not planta or not planta.id %}
+                <div>
+                    <label for="id" class="block text-sm font-medium text-gray-300 mb-2">
+                        ID de Planta <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="id" name="id" required
+                           value="{{ planta.id if planta else '' }}"
+                           pattern="[a-z0-9_]+"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="hospital_central">
+                    <p class="text-xs text-gray-400 mt-1">Solo letras minúsculas, números y guiones bajos</p>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label for="nombre" class="block text-sm font-medium text-gray-300 mb-2">
+                        Nombre <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="nombre" name="nombre" required
+                           value="{{ planta.nombre if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Hospital Central">
+                </div>
+                
+                <div>
+                    <label for="codigo_interno" class="block text-sm font-medium text-gray-300 mb-2">
+                        Código Interno
+                    </label>
+                    <input type="text" id="codigo_interno" name="codigo_interno"
+                           value="{{ planta.codigo_interno if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="HC-001">
+                </div>
+                
+                <div>
+                    <label for="numero_patrimonio" class="block text-sm font-medium text-gray-300 mb-2">
+                        Número de Patrimonio
+                    </label>
+                    <input type="text" id="numero_patrimonio" name="numero_patrimonio"
+                           value="{{ planta.numero_patrimonio if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="PAT-12345">
+                    <p class="text-xs text-gray-400 mt-1">Debe ser único en el sistema</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ubicación -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-map-marker-alt mr-2"></i> Ubicación
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="ubicacion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Ubicación / Descripción
+                    </label>
+                    <input type="text" id="ubicacion" name="ubicacion"
+                           value="{{ planta.ubicacion if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Edificio principal, planta baja">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="direccion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Dirección
+                    </label>
+                    <input type="text" id="direccion" name="direccion"
+                           value="{{ planta.direccion if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Av. Principal 1234">
+                </div>
+                
+                <div>
+                    <label for="ciudad" class="block text-sm font-medium text-gray-300 mb-2">
+                        Ciudad
+                    </label>
+                    <input type="text" id="ciudad" name="ciudad"
+                           value="{{ planta.ciudad if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Asunción">
+                </div>
+                
+                <div>
+                    <label for="departamento" class="block text-sm font-medium text-gray-300 mb-2">
+                        Departamento
+                    </label>
+                    <select id="departamento" name="departamento"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="">Seleccionar...</option>
+                        {% for depto in ['Asunción', 'Central', 'Alto Paraná', 'Itapúa', 'Caaguazú', 
+                                         'San Pedro', 'Cordillera', 'Paraguarí', 'Guairá', 'Caazapá',
+                                         'Misiones', 'Ñeembucú', 'Amambay', 'Canindeyú', 'Concepción',
+                                         'Presidente Hayes', 'Alto Paraguay', 'Boquerón'] %}
+                        <option value="{{ depto }}" {% if planta and planta.departamento == depto %}selected{% endif %}>
+                            {{ depto }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configuración técnica -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-cog mr-2"></i> Configuración Técnica
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="tipo_instalacion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Tipo de Instalación
+                    </label>
+                    <select id="tipo_instalacion" name="tipo_instalacion"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="simplex" {% if planta and planta.tipo_instalacion == 'simplex' %}selected{% endif %}>
+                            Simplex (1 línea)
+                        </option>
+                        <option value="duplex" {% if planta and planta.tipo_instalacion == 'duplex' %}selected{% endif %}>
+                            Duplex (2 líneas)
+                        </option>
+                        <option value="triplex" {% if planta and planta.tipo_instalacion == 'triplex' %}selected{% endif %}>
+                            Triplex (3 líneas)
+                        </option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="capacidad_nominal_nm3h" class="block text-sm font-medium text-gray-300 mb-2">
+                        Capacidad Nominal (Nm³/h)
+                    </label>
+                    <input type="number" id="capacidad_nominal_nm3h" name="capacidad_nominal_nm3h"
+                           step="0.1" min="0"
+                           value="{{ planta.capacidad_nominal_nm3h if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="50">
+                </div>
+                
+                <div>
+                    <label for="fecha_instalacion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Fecha de Instalación
+                    </label>
+                    <input type="date" id="fecha_instalacion" name="fecha_instalacion"
+                           value="{{ planta.fecha_instalacion if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contacto -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-user mr-2"></i> Responsable y Contacto
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="responsable" class="block text-sm font-medium text-gray-300 mb-2">
+                        Responsable
+                    </label>
+                    <input type="text" id="responsable" name="responsable"
+                           value="{{ planta.responsable if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ing. Juan Pérez">
+                </div>
+                
+                <div>
+                    <label for="telefono_contacto" class="block text-sm font-medium text-gray-300 mb-2">
+                        Teléfono
+                    </label>
+                    <input type="tel" id="telefono_contacto" name="telefono_contacto"
+                           value="{{ planta.telefono_contacto if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="+595 981 123456">
+                </div>
+                
+                <div>
+                    <label for="email_contacto" class="block text-sm font-medium text-gray-300 mb-2">
+                        Email
+                    </label>
+                    <input type="email" id="email_contacto" name="email_contacto"
+                           value="{{ planta.email_contacto if planta else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="contacto@hospital.gov.py">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estado (solo edición) -->
+        {% if planta and planta.id %}
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-toggle-on mr-2"></i> Estado
+            </h2>
+            
+            <div>
+                <label for="estado" class="block text-sm font-medium text-gray-300 mb-2">
+                    Estado de la Planta
+                </label>
+                <select id="estado" name="estado"
+                        class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                               text-white focus:ring-2 focus:ring-primary">
+                    <option value="activa" {% if planta.estado == 'activa' %}selected{% endif %}>
+                        ✅ Activa
+                    </option>
+                    <option value="mantenimiento" {% if planta.estado == 'mantenimiento' %}selected{% endif %}>
+                        🔧 En Mantenimiento
+                    </option>
+                    <option value="inactiva" {% if planta.estado == 'inactiva' %}selected{% endif %}>
+                        ⏸️ Inactiva
+                    </option>
+                    <option value="baja" {% if planta.estado == 'baja' %}selected{% endif %}>
+                        ❌ Dada de Baja
+                    </option>
+                </select>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Notas -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-sticky-note mr-2"></i> Notas
+            </h2>
+            
+            <textarea id="notas" name="notas" rows="3"
+                      class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                             text-white focus:ring-2 focus:ring-primary"
+                      placeholder="Notas adicionales...">{{ planta.notas if planta else '' }}</textarea>
+        </div>
+        
+        <!-- Botones -->
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('admin.plantas_lista') }}" 
+               class="px-6 py-3 bg-dark-700 hover:bg-dark-600 rounded-lg transition">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+                <i class="fas fa-save mr-2"></i>
+                {{ 'Guardar Cambios' if planta and planta.id else 'Crear Planta' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

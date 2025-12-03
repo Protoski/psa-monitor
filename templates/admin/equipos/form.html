@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if equipo and equipo.id else 'Nuevo' }} Equipo - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4">
+    <!-- Breadcrumb -->
+    <nav class="text-sm text-gray-400 mb-4">
+        <a href="{{ url_for('admin.equipos_lista') }}" class="hover:text-primary">Equipos</a>
+        <span class="mx-2">/</span>
+        <span class="text-white">{{ 'Editar' if equipo and equipo.id else 'Nuevo' }}</span>
+    </nav>
+    
+    <h1 class="text-2xl font-bold mb-6">
+        <i class="fas fa-cog mr-2 text-primary"></i>
+        {{ 'Editar Equipo' if equipo and equipo.id else 'Nuevo Equipo' }}
+    </h1>
+    
+    <form method="POST" class="space-y-6">
+        <!-- Ubicación -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-map-marker-alt mr-2"></i> Ubicación
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="planta_id" class="block text-sm font-medium text-gray-300 mb-2">
+                        Planta <span class="text-red-400">*</span>
+                    </label>
+                    <select id="planta_id" name="planta_id" required
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="">Seleccionar planta...</option>
+                        {% for pid, p in plantas.items() %}
+                        <option value="{{ pid }}" 
+                                {% if equipo and equipo.planta_id == pid %}selected{% endif %}>
+                            {{ p.nombre }} ({{ p.tipo_instalacion }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="posicion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Posición / Línea
+                    </label>
+                    <select id="posicion" name="posicion"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="1" {% if equipo and equipo.posicion == 1 %}selected{% endif %}>
+                            Línea 1 (Primaria)
+                        </option>
+                        <option value="2" {% if equipo and equipo.posicion == 2 %}selected{% endif %}>
+                            Línea 2 (Secundaria)
+                        </option>
+                        <option value="3" {% if equipo and equipo.posicion == 3 %}selected{% endif %}>
+                            Línea 3
+                        </option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">Para plantas duplex/triplex</p>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="ubicacion_interna" class="block text-sm font-medium text-gray-300 mb-2">
+                        Ubicación Interna
+                    </label>
+                    <input type="text" id="ubicacion_interna" name="ubicacion_interna"
+                           value="{{ equipo.ubicacion_interna if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: Sala de compresores, Exterior, etc.">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tipo y Serie -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-layer-group mr-2"></i> Tipo de Equipo
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="tipo_equipo_id" class="block text-sm font-medium text-gray-300 mb-2">
+                        Tipo <span class="text-red-400">*</span>
+                    </label>
+                    <select id="tipo_equipo_id" name="tipo_equipo_id" required
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary"
+                            onchange="filtrarSeries()">
+                        <option value="">Seleccionar tipo...</option>
+                        {% for tipo in tipos %}
+                        <option value="{{ tipo.id }}" 
+                                {% if equipo and equipo.tipo_equipo_id == tipo.id %}selected{% endif %}>
+                            {{ tipo.icono }} {{ tipo.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="serie_equipo_id" class="block text-sm font-medium text-gray-300 mb-2">
+                        Serie / Modelo (opcional)
+                    </label>
+                    <select id="serie_equipo_id" name="serie_equipo_id"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="">Sin serie definida</option>
+                        {% for serie in series %}
+                        <option value="{{ serie.id }}" 
+                                data-tipo="{{ serie.tipo_equipo_id }}"
+                                {% if equipo and equipo.serie_equipo_id == serie.id %}selected{% endif %}>
+                            {{ serie.fabricante }} - {{ serie.modelo }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Identificación -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-tag mr-2"></i> Identificación
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="nombre" class="block text-sm font-medium text-gray-300 mb-2">
+                        Nombre / Descripción <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="nombre" name="nombre" required
+                           value="{{ equipo.nombre if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: Compresor Principal">
+                </div>
+                
+                <div>
+                    <label for="tag" class="block text-sm font-medium text-gray-300 mb-2">
+                        TAG
+                    </label>
+                    <input type="text" id="tag" name="tag"
+                           value="{{ equipo.tag if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: COMP-01, PSA-A">
+                </div>
+                
+                <div>
+                    <label for="numero_patrimonio" class="block text-sm font-medium text-gray-300 mb-2">
+                        Número de Patrimonio
+                    </label>
+                    <input type="text" id="numero_patrimonio" name="numero_patrimonio"
+                           value="{{ equipo.numero_patrimonio if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="PAT-EQ-12345">
+                    <p class="text-xs text-gray-400 mt-1">Debe ser único en todo el sistema</p>
+                </div>
+                
+                <div>
+                    <label for="numero_serie" class="block text-sm font-medium text-gray-300 mb-2">
+                        Número de Serie
+                    </label>
+                    <input type="text" id="numero_serie" name="numero_serie"
+                           value="{{ equipo.numero_serie if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="SN123456789">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Marca y Modelo (manual) -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-info-circle mr-2"></i> Datos del Fabricante
+            </h2>
+            <p class="text-xs text-gray-400 mb-4">Si no seleccionaste una serie, podés ingresar manualmente:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="marca" class="block text-sm font-medium text-gray-300 mb-2">
+                        Marca
+                    </label>
+                    <input type="text" id="marca" name="marca"
+                           value="{{ equipo.marca if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: Atlas Copco">
+                </div>
+                
+                <div>
+                    <label for="modelo" class="block text-sm font-medium text-gray-300 mb-2">
+                        Modelo
+                    </label>
+                    <input type="text" id="modelo" name="modelo"
+                           value="{{ equipo.modelo if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: GA 37">
+                </div>
+                
+                <div>
+                    <label for="año_fabricacion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Año de Fabricación
+                    </label>
+                    <input type="number" id="año_fabricacion" name="año_fabricacion"
+                           min="1990" max="2030"
+                           value="{{ equipo.año_fabricacion if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="2020">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estado y Criticidad -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-heartbeat mr-2"></i> Estado y Criticidad
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="estado" class="block text-sm font-medium text-gray-300 mb-2">
+                        Estado
+                    </label>
+                    <select id="estado" name="estado"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="operativo" {% if equipo and equipo.estado == 'operativo' %}selected{% endif %}>
+                            ✅ Operativo
+                        </option>
+                        <option value="standby" {% if equipo and equipo.estado == 'standby' %}selected{% endif %}>
+                            💤 Standby
+                        </option>
+                        <option value="mantenimiento" {% if equipo and equipo.estado == 'mantenimiento' %}selected{% endif %}>
+                            🔧 En Mantenimiento
+                        </option>
+                        <option value="fuera_servicio" {% if equipo and equipo.estado == 'fuera_servicio' %}selected{% endif %}>
+                            ⚠️ Fuera de Servicio
+                        </option>
+                        <option value="baja" {% if equipo and equipo.estado == 'baja' %}selected{% endif %}>
+                            ❌ Dado de Baja
+                        </option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="criticidad" class="block text-sm font-medium text-gray-300 mb-2">
+                        Criticidad
+                    </label>
+                    <select id="criticidad" name="criticidad"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="baja" {% if equipo and equipo.criticidad == 'baja' %}selected{% endif %}>
+                            Baja
+                        </option>
+                        <option value="media" {% if not equipo or equipo.criticidad == 'media' %}selected{% endif %}>
+                            Media
+                        </option>
+                        <option value="alta" {% if equipo and equipo.criticidad == 'alta' %}selected{% endif %}>
+                            Alta
+                        </option>
+                        <option value="critica" {% if equipo and equipo.criticidad == 'critica' %}selected{% endif %}>
+                            Crítica
+                        </option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="fecha_instalacion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Fecha de Instalación
+                    </label>
+                    <input type="date" id="fecha_instalacion" name="fecha_instalacion"
+                           value="{{ equipo.fecha_instalacion if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Horas de operación -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-clock mr-2"></i> Horas de Operación
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="horas_operacion" class="block text-sm font-medium text-gray-300 mb-2">
+                        Horas Actuales
+                    </label>
+                    <input type="number" id="horas_operacion" name="horas_operacion"
+                           min="0"
+                           value="{{ equipo.horas_operacion if equipo else 0 }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+                
+                <div>
+                    <label for="horas_proximo_servicio" class="block text-sm font-medium text-gray-300 mb-2">
+                        Próximo Servicio (horas)
+                    </label>
+                    <input type="number" id="horas_proximo_servicio" name="horas_proximo_servicio"
+                           min="0"
+                           value="{{ equipo.horas_proximo_servicio if equipo else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: 5000">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notas -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">
+                <i class="fas fa-sticky-note mr-2"></i> Notas
+            </h2>
+            
+            <textarea id="notas" name="notas" rows="3"
+                      class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                             text-white focus:ring-2 focus:ring-primary"
+                      placeholder="Notas adicionales...">{{ equipo.notas if equipo else '' }}</textarea>
+        </div>
+        
+        <!-- Botones -->
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('admin.equipos_lista') }}" 
+               class="px-6 py-3 bg-dark-700 hover:bg-dark-600 rounded-lg transition">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+                <i class="fas fa-save mr-2"></i>
+                {{ 'Guardar Cambios' if equipo and equipo.id else 'Crear Equipo' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filtrarSeries() {
+    const tipoId = document.getElementById('tipo_equipo_id').value;
+    const serieSelect = document.getElementById('serie_equipo_id');
+    
+    Array.from(serieSelect.options).forEach(opt => {
+        if (!opt.value || opt.dataset.tipo === tipoId) {
+            opt.style.display = '';
+        } else {
+            opt.style.display = 'none';
+        }
+    });
+    
+    // Reset si la serie actual no corresponde al tipo
+    if (serieSelect.selectedOptions[0]?.dataset.tipo && 
+        serieSelect.selectedOptions[0].dataset.tipo !== tipoId) {
+        serieSelect.value = '';
+    }
+}
+
+// Ejecutar al cargar
+document.addEventListener('DOMContentLoaded', filtrarSeries);
+</script>
+{% endblock %}

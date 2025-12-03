@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if usuario and usuario.id else 'Nuevo' }} Usuario - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4">
+    <nav class="text-sm text-gray-400 mb-4">
+        <a href="{{ url_for('admin.usuarios_lista') }}" class="hover:text-primary">Usuarios</a>
+        <span class="mx-2">/</span>
+        <span class="text-white">{{ 'Editar' if usuario and usuario.id else 'Nuevo' }}</span>
+    </nav>
+    
+    <h1 class="text-2xl font-bold mb-6">
+        <i class="fas fa-user mr-2 text-primary"></i>
+        {{ 'Editar Usuario' if usuario and usuario.id else 'Nuevo Usuario' }}
+    </h1>
+    
+    <form method="POST" class="space-y-6">
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">Credenciales</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">
+                        Usuario <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="username" name="username" required
+                           value="{{ usuario.username if usuario else '' }}"
+                           {% if usuario and usuario.id %}readonly class="w-full px-4 py-3 bg-dark-600 border border-dark-600 rounded-lg text-gray-400 cursor-not-allowed"
+                           {% else %}class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary"{% endif %}>
+                </div>
+                
+                <div>
+                    <label for="{% if usuario and usuario.id %}nuevo_password{% else %}password{% endif %}" 
+                           class="block text-sm font-medium text-gray-300 mb-2">
+                        {% if usuario and usuario.id %}Nueva Contraseña (dejar vacío para no cambiar){% else %}Contraseña <span class="text-red-400">*</span>{% endif %}
+                    </label>
+                    <input type="password" 
+                           id="{% if usuario and usuario.id %}nuevo_password{% else %}password{% endif %}" 
+                           name="{% if usuario and usuario.id %}nuevo_password{% else %}password{% endif %}"
+                           {% if not usuario or not usuario.id %}required{% endif %}
+                           minlength="6"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Mínimo 6 caracteres">
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">Información Personal</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="nombre_completo" class="block text-sm font-medium text-gray-300 mb-2">
+                        Nombre Completo
+                    </label>
+                    <input type="text" id="nombre_completo" name="nombre_completo"
+                           value="{{ usuario.nombre_completo if usuario else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+                
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
+                        Email
+                    </label>
+                    <input type="email" id="email" name="email"
+                           value="{{ usuario.email if usuario else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+                
+                <div>
+                    <label for="telegram_id" class="block text-sm font-medium text-gray-300 mb-2">
+                        Telegram ID
+                    </label>
+                    <input type="number" id="telegram_id" name="telegram_id"
+                           value="{{ usuario.telegram_id if usuario else '' }}"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary"
+                           placeholder="Ej: 123456789">
+                    <p class="text-xs text-gray-400 mt-1">Para vincular con el bot de Telegram</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-dark-600">Permisos</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="rol" class="block text-sm font-medium text-gray-300 mb-2">
+                        Rol
+                    </label>
+                    <select id="rol" name="rol"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="lector" {% if not usuario or usuario.rol == 'lector' %}selected{% endif %}>
+                            👁️ Lector - Solo puede ver datos
+                        </option>
+                        <option value="operador" {% if usuario and usuario.rol == 'operador' %}selected{% endif %}>
+                            🔧 Operador - Puede editar plantas y equipos
+                        </option>
+                        <option value="admin" {% if usuario and usuario.rol == 'admin' %}selected{% endif %}>
+                            🔑 Admin - Control total del sistema
+                        </option>
+                    </select>
+                </div>
+                
+                {% if usuario and usuario.id %}
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="activo" name="activo"
+                           {% if usuario.activo %}checked{% endif %}
+                           class="w-5 h-5 rounded bg-dark-700 border-dark-600 text-primary 
+                                  focus:ring-primary focus:ring-offset-dark-800">
+                    <label for="activo" class="text-sm text-gray-300">
+                        Usuario activo (puede iniciar sesión)
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('admin.usuarios_lista') }}" 
+               class="px-6 py-3 bg-dark-700 hover:bg-dark-600 rounded-lg transition">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+                <i class="fas fa-save mr-2"></i>
+                {{ 'Guardar Cambios' if usuario and usuario.id else 'Crear Usuario' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

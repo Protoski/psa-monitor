@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Serie - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4">
+    <nav class="text-sm text-gray-400 mb-4">
+        <a href="{{ url_for('admin.series_lista') }}" class="hover:text-primary">Series</a>
+        <span class="mx-2">/</span>
+        <span class="text-white">Nueva</span>
+    </nav>
+    
+    <h1 class="text-2xl font-bold mb-6">
+        <i class="fas fa-layer-group mr-2 text-primary"></i>
+        Nueva Serie de Equipo
+    </h1>
+    
+    <form method="POST" class="space-y-6">
+        <div class="bg-dark-800 rounded-xl p-6 space-y-4">
+            <div>
+                <label for="tipo_equipo_id" class="block text-sm font-medium text-gray-300 mb-2">
+                    Tipo de Equipo <span class="text-red-400">*</span>
+                </label>
+                <select id="tipo_equipo_id" name="tipo_equipo_id" required
+                        class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                               text-white focus:ring-2 focus:ring-primary">
+                    <option value="">Seleccionar tipo...</option>
+                    {% for tipo in tipos %}
+                    <option value="{{ tipo.id }}">{{ tipo.icono }} {{ tipo.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="fabricante" class="block text-sm font-medium text-gray-300 mb-2">
+                    Fabricante <span class="text-red-400">*</span>
+                </label>
+                <input type="text" id="fabricante" name="fabricante" required
+                       class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                              text-white focus:ring-2 focus:ring-primary"
+                       placeholder="Ej: Atlas Copco, Kaeser, Novair...">
+            </div>
+            
+            <div>
+                <label for="modelo" class="block text-sm font-medium text-gray-300 mb-2">
+                    Modelo <span class="text-red-400">*</span>
+                </label>
+                <input type="text" id="modelo" name="modelo" required
+                       class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                              text-white focus:ring-2 focus:ring-primary"
+                       placeholder="Ej: GA 37 VSD+, PSA 30...">
+            </div>
+            
+            <div>
+                <label for="descripcion" class="block text-sm font-medium text-gray-300 mb-2">
+                    Descripción
+                </label>
+                <textarea id="descripcion" name="descripcion" rows="3"
+                          class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                 text-white focus:ring-2 focus:ring-primary"
+                          placeholder="Especificaciones, características..."></textarea>
+            </div>
+            
+            <div>
+                <label for="manual_url" class="block text-sm font-medium text-gray-300 mb-2">
+                    URL del Manual (opcional)
+                </label>
+                <input type="url" id="manual_url" name="manual_url"
+                       class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                              text-white focus:ring-2 focus:ring-primary"
+                       placeholder="https://...">
+            </div>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('admin.series_lista') }}" 
+               class="px-6 py-3 bg-dark-700 hover:bg-dark-600 rounded-lg transition">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+                <i class="fas fa-save mr-2"></i> Crear Serie
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

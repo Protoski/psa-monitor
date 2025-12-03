@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <!-- Bienvenida -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold">
+            👋 Bienvenido, {{ user.nombre_completo or user.username }}
+        </h1>
+        <p class="text-gray-400 mt-1">Panel de control del sistema de monitoreo PSA</p>
+    </div>
+    
+    <!-- Accesos rápidos -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <a href="{{ url_for('dashboard.dashboard') }}" 
+           class="bg-dark-800 hover:bg-dark-700 rounded-xl p-6 transition group">
+            <div class="text-4xl mb-3">📊</div>
+            <h3 class="font-semibold text-lg group-hover:text-primary transition">Monitoreo en Vivo</h3>
+            <p class="text-gray-400 text-sm mt-1">Ver estado actual de todas las plantas</p>
+        </a>
+        
+        <a href="{{ url_for('admin.plantas_lista') }}" 
+           class="bg-dark-800 hover:bg-dark-700 rounded-xl p-6 transition group">
+            <div class="text-4xl mb-3">🏭</div>
+            <h3 class="font-semibold text-lg group-hover:text-primary transition">Gestión de Plantas</h3>
+            <p class="text-gray-400 text-sm mt-1">Administrar plantas y ubicaciones</p>
+        </a>
+        
+        <a href="{{ url_for('admin.equipos_lista') }}" 
+           class="bg-dark-800 hover:bg-dark-700 rounded-xl p-6 transition group">
+            <div class="text-4xl mb-3">⚙️</div>
+            <h3 class="font-semibold text-lg group-hover:text-primary transition">Gestión de Equipos</h3>
+            <p class="text-gray-400 text-sm mt-1">Compresores, PSA, secadores, etc.</p>
+        </a>
+        
+        <a href="{{ url_for('dashboard.dashboard_scada') }}" 
+           class="bg-dark-800 hover:bg-dark-700 rounded-xl p-6 transition group">
+            <div class="text-4xl mb-3">🖥️</div>
+            <h3 class="font-semibold text-lg group-hover:text-primary transition">SCADA</h3>
+            <p class="text-gray-400 text-sm mt-1">Dashboard avanzado con gráficos</p>
+        </a>
+    </div>
+    
+    {% if user.rol == 'admin' %}
+    <!-- Panel admin -->
+    <div class="bg-dark-800 rounded-xl p-6 mb-8">
+        <h2 class="text-lg font-semibold mb-4">
+            <i class="fas fa-shield-alt mr-2 text-red-400"></i>
+            Administración
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{{ url_for('admin.usuarios_lista') }}" 
+               class="bg-dark-700 hover:bg-dark-600 rounded-lg p-4 transition">
+                <i class="fas fa-users text-2xl text-primary mb-2"></i>
+                <h3 class="font-medium">Usuarios</h3>
+                <p class="text-gray-400 text-sm">Gestionar accesos</p>
+            </a>
+            <a href="{{ url_for('admin.series_lista') }}" 
+               class="bg-dark-700 hover:bg-dark-600 rounded-lg p-4 transition">
+                <i class="fas fa-layer-group text-2xl text-primary mb-2"></i>
+                <h3 class="font-medium">Series de Equipo</h3>
+                <p class="text-gray-400 text-sm">Modelos y fabricantes</p>
+            </a>
+            <a href="{{ url_for('dashboard.reportes') }}" 
+               class="bg-dark-700 hover:bg-dark-600 rounded-lg p-4 transition">
+                <i class="fas fa-file-export text-2xl text-primary mb-2"></i>
+                <h3 class="font-medium">Reportes</h3>
+                <p class="text-gray-400 text-sm">Exportar datos</p>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Información del sistema -->
+    <div class="bg-dark-800 rounded-xl p-6">
+        <h2 class="text-lg font-semibold mb-4">
+            <i class="fas fa-info-circle mr-2 text-primary"></i>
+            Información del Sistema
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <p class="text-gray-400">Versión</p>
+                <p class="font-medium">2.0.0</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Base de datos</p>
+                <p class="font-medium">PostgreSQL</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Tu rol</p>
+                <p class="font-medium capitalize">{{ user.rol }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Telegram ID</p>
+                <p class="font-medium">{{ user.telegram_id or 'No vinculado' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

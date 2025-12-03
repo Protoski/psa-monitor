@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4">
+    <h1 class="text-2xl font-bold mb-6">
+        <i class="fas fa-file-export mr-2 text-primary"></i>
+        Exportar Reportes
+    </h1>
+    
+    <div class="bg-dark-800 rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">Exportar Historial de Monitoreo</h2>
+        
+        <form id="exportForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="planta_id" class="block text-sm font-medium text-gray-300 mb-2">
+                        Planta
+                    </label>
+                    <select id="planta_id" name="planta_id"
+                            class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                   text-white focus:ring-2 focus:ring-primary">
+                        <option value="all">Todas las plantas</option>
+                        {% for pid, p in plantas.items() %}
+                        <option value="{{ pid }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="desde" class="block text-sm font-medium text-gray-300 mb-2">
+                        Desde
+                    </label>
+                    <input type="date" id="desde" name="desde"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+                
+                <div>
+                    <label for="hasta" class="block text-sm font-medium text-gray-300 mb-2">
+                        Hasta
+                    </label>
+                    <input type="date" id="hasta" name="hasta"
+                           class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg 
+                                  text-white focus:ring-2 focus:ring-primary">
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <button type="button" onclick="exportarCSV()" 
+                        class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg transition">
+                    <i class="fas fa-file-csv mr-2"></i> Exportar CSV
+                </button>
+                <button type="button" onclick="verEstadisticas()" 
+                        class="px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+                    <i class="fas fa-chart-bar mr-2"></i> Ver Estadísticas
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Resultados de estadísticas -->
+    <div id="statsContainer" class="bg-dark-800 rounded-xl p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Estadísticas del Período</h2>
+        <div id="statsContent"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function exportarCSV() {
+    const planta = document.getElementById('planta_id').value;
+    const desde = document.getElementById('desde').value;
+    const hasta = document.getElementById('hasta').value;
+    
+    let url = `/api/exportar_csv?planta_id=${planta}`;
+    if (desde) url += `&desde=${desde}`;
+    if (hasta) url += `&hasta=${hasta}`;
+    
+    window.open(url, '_blank');
+}
+
+function verEstadisticas() {
+    const planta = document.getElementById('planta_id').value;
+    const desde = document.getElementById('desde').value;
+    const hasta = document.getElementById('hasta').value;
+    
+    if (planta === 'all') {
+        alert('Selecciona una planta específica para ver estadísticas');
+        return;
+    }
+    
+    let url = `/api/estadisticas?planta_id=${planta}`;
+    if (desde) url += `&desde=${desde}`;
+    if (hasta) url += `&hasta=${hasta}`;
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(stats => {
+            const container = document.getElementById('statsContainer');
+            const content = document.getElementById('statsContent');
+            
+            if (!stats.periodo) {
+                content.innerHTML = '<p class="text-gray-400">No hay datos para el período seleccionado</p>';
+            } else {
+                content.innerHTML = `
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="bg-dark-700 rounded-lg p-4 text-center">
+                            <p class="text-gray-400 text-xs">Registros</p>
+                            <p class="text-2xl font-bold">${stats.periodo.registros}</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-lg p-4 text-center">
+                            <p class="text-gray-400 text-xs">Disponibilidad</p>
+                            <p class="text-2xl font-bold text-green-400">${stats.kpis?.disponibilidad || 0}%</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-lg p-4 text-center">
+                            <p class="text-gray-400 text-xs">Cumpl. Pureza</p>
+                            <p class="text-2xl font-bold">${stats.kpis?.cumplimiento_pureza || 0}%</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-lg p-4 text-center">
+                            <p class="text-gray-400 text-xs">Alarmas</p>
+                            <p class="text-2xl font-bold text-red-400">${stats.alarmas?.total || 0}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-dark-700 rounded-lg p-4">
+                            <h3 class="font-semibold mb-2">Pureza O₂</h3>
+                            <p>Promedio: ${stats.pureza?.avg || 0}%</p>
+                            <p>Mín: ${stats.pureza?.min || 0}% | Máx: ${stats.pureza?.max || 0}%</p>
+                        </div>
+                        <div class="bg-dark-700 rounded-lg p-4">
+                            <h3 class="font-semibold mb-2">Flujo</h3>
+                            <p>Promedio: ${stats.flujo?.avg || 0} Nm³/h</p>
+                            <p>Mín: ${stats.flujo?.min || 0} | Máx: ${stats.flujo?.max || 0}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.classList.remove('hidden');
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error al obtener estadísticas');
+        });
+}
+</script>
+{% endblock %}

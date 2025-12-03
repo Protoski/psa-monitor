@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}{{ planta.nombre }} - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <!-- Breadcrumb -->
+    <nav class="text-sm text-gray-400 mb-4">
+        <a href="{{ url_for('dashboard.dashboard') }}" class="hover:text-primary">Monitoreo</a>
+        <span class="mx-2">/</span>
+        <span class="text-white">{{ planta.nombre }}</span>
+    </nav>
+    
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h1 class="text-2xl font-bold flex items-center gap-3">
+                {% if planta.alarma %}
+                <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                {% elif planta.modo == 'Producción' %}
+                <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                {% else %}
+                <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                {% endif %}
+                {{ planta.nombre }}
+            </h1>
+            <p class="text-gray-400 mt-1">
+                <i class="fas fa-map-marker-alt mr-1"></i> {{ planta.ubicacion or planta.ciudad or 'Sin ubicación' }}
+                {% if planta.codigo_interno %}
+                <span class="ml-3 text-xs bg-dark-600 px-2 py-1 rounded">{{ planta.codigo_interno }}</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('admin.plantas_editar', planta_id=planta.id) }}" 
+               class="px-4 py-2 bg-dark-700 hover:bg-dark-600 rounded-lg transition">
+                <i class="fas fa-edit mr-1"></i> Editar
+            </a>
+            <a href="{{ url_for('dashboard.dashboard_scada') }}?planta={{ planta.id }}" 
+               class="px-4 py-2 bg-primary hover:bg-blue-600 rounded-lg transition">
+                <i class="fas fa-chart-area mr-1"></i> SCADA
+            </a>
+        </div>
+    </div>
+    
+    <!-- Estado actual -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Métricas principales -->
+        <div class="lg:col-span-2 bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4">Estado Actual</h2>
+            
+            {% if planta.alarma %}
+            <div class="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
+                <div class="flex items-center gap-2 text-red-400">
+                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                    <span class="font-semibold">ALARMA ACTIVA</span>
+                </div>
+                <p class="text-red-300 mt-1">{{ planta.mensaje_alarma }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-dark-700 rounded-lg p-4 text-center">
+                    <p class="text-gray-400 text-xs uppercase mb-1">Pureza O₂</p>
+                    <p class="text-3xl font-bold {% if planta.pureza_pct >= 93 %}text-green-400{% elif planta.pureza_pct >= 90 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                        {{ planta.pureza_pct|default(0)|round(1) }}%
+                    </p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-4 text-center">
+                    <p class="text-gray-400 text-xs uppercase mb-1">Flujo</p>
+                    <p class="text-3xl font-bold text-blue-400">
+                        {{ planta.flujo_nm3h|default(0)|round(1) }}
+                    </p>
+                    <p class="text-xs text-gray-400">Nm³/h</p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-4 text-center">
+                    <p class="text-gray-400 text-xs uppercase mb-1">Presión</p>
+                    <p class="text-3xl font-bold text-gray-300">
+                        {{ planta.presion_bar|default(0)|round(1) }}
+                    </p>
+                    <p class="text-xs text-gray-400">bar</p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-4 text-center">
+                    <p class="text-gray-400 text-xs uppercase mb-1">Temperatura</p>
+                    <p class="text-3xl font-bold text-orange-400">
+                        {{ planta.temperatura_c|default(0)|round(1) }}°C
+                    </p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div class="bg-dark-700 rounded-lg p-4">
+                    <p class="text-gray-400 text-xs uppercase mb-1">Modo</p>
+                    <p class="text-xl font-semibold
+                              {% if planta.modo == 'Producción' %}text-green-400
+                              {% elif planta.modo == 'Mantenimiento' %}text-yellow-400
+                              {% else %}text-gray-400{% endif %}">
+                        {{ planta.modo or 'Desconocido' }}
+                    </p>
+                </div>
+                <div class="bg-dark-700 rounded-lg p-4">
+                    <p class="text-gray-400 text-xs uppercase mb-1">Horas de Operación</p>
+                    <p class="text-xl font-semibold text-gray-300">
+                        {{ "{:,}".format(planta.horas_operacion|default(0)|int) }} h
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Info administrativa -->
+        <div class="bg-dark-800 rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4">Información</h2>
+            <div class="space-y-3 text-sm">
+                {% if planta.numero_patrimonio %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Nº Patrimonio</span>
+                    <span class="font-mono">{{ planta.numero_patrimonio }}</span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Tipo</span>
+                    <span class="capitalize">{{ planta.tipo_instalacion }}</span>
+                </div>
+                {% if planta.capacidad_nominal_nm3h %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Capacidad</span>
+                    <span>{{ planta.capacidad_nominal_nm3h }} Nm³/h</span>
+                </div>
+                {% endif %}
+                {% if planta.responsable %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Responsable</span>
+                    <span>{{ planta.responsable }}</span>
+                </div>
+                {% endif %}
+                {% if planta.telefono_contacto %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Teléfono</span>
+                    <a href="tel:{{ planta.telefono_contacto }}" class="text-primary">
+                        {{ planta.telefono_contacto }}
+                    </a>
+                </div>
+                {% endif %}
+                {% if planta.fecha_instalacion %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Instalación</span>
+                    <span>{{ planta.fecha_instalacion }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPIs últimas 24h -->
+    {% if stats %}
+    <div class="bg-dark-800 rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">Estadísticas - Últimas 24h</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+                <p class="text-gray-400 text-xs uppercase">Disponibilidad</p>
+                <p class="text-2xl font-bold {% if stats.kpis.disponibilidad >= 90 %}text-green-400{% else %}text-yellow-400{% endif %}">
+                    {{ stats.kpis.disponibilidad }}%
+                </p>
+            </div>
+            <div class="text-center">
+                <p class="text-gray-400 text-xs uppercase">Cumpl. Pureza</p>
+                <p class="text-2xl font-bold {% if stats.kpis.cumplimiento_pureza >= 95 %}text-green-400{% else %}text-yellow-400{% endif %}">
+                    {{ stats.kpis.cumplimiento_pureza }}%
+                </p>
+            </div>
+            <div class="text-center">
+                <p class="text-gray-400 text-xs uppercase">Pureza Prom.</p>
+                <p class="text-2xl font-bold text-gray-300">{{ stats.pureza.avg }}%</p>
+            </div>
+            <div class="text-center">
+                <p class="text-gray-400 text-xs uppercase">Registros</p>
+                <p class="text-2xl font-bold text-gray-300">{{ stats.periodo.registros }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Equipos -->
+    <div class="bg-dark-800 rounded-xl p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">
+                <i class="fas fa-cogs mr-2 text-primary"></i>
+                Equipos Instalados
+            </h2>
+            <a href="{{ url_for('admin.equipos_nuevo', planta_id=planta.id) }}" 
+               class="px-3 py-1 bg-primary hover:bg-blue-600 rounded-lg text-sm transition">
+                <i class="fas fa-plus mr-1"></i> Agregar
+            </a>
+        </div>
+        
+        {% if equipos %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for equipo in equipos %}
+            <div class="bg-dark-700 rounded-lg p-4 hover:bg-dark-600 transition">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-2xl mr-2">{{ equipo.tipo_icono }}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-dark-600">
+                            {{ equipo.tipo_nombre }}
+                        </span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-xs
+                                 {% if equipo.estado == 'operativo' %}bg-green-500/20 text-green-400
+                                 {% elif equipo.estado == 'standby' %}bg-blue-500/20 text-blue-400
+                                 {% elif equipo.estado == 'mantenimiento' %}bg-yellow-500/20 text-yellow-400
+                                 {% else %}bg-red-500/20 text-red-400{% endif %}">
+                        {{ equipo.estado }}
+                    </span>
+                </div>
+                
+                <h3 class="font-semibold mt-2">{{ equipo.nombre }}</h3>
+                
+                <div class="text-xs text-gray-400 mt-2 space-y-1">
+                    {% if equipo.marca or equipo.modelo %}
+                    <p>{{ equipo.marca }} {{ equipo.modelo }}</p>
+                    {% endif %}
+                    {% if equipo.numero_serie %}
+                    <p>S/N: {{ equipo.numero_serie }}</p>
+                    {% endif %}
+                    {% if equipo.numero_patrimonio %}
+                    <p>Patr: {{ equipo.numero_patrimonio }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-3 pt-3 border-t border-dark-600 flex justify-between text-xs">
+                    {% if equipo.horas_operacion %}
+                    <span class="text-gray-400">{{ equipo.horas_operacion }} h</span>
+                    {% endif %}
+                    <a href="{{ url_for('admin.equipos_editar', equipo_id=equipo.id) }}" 
+                       class="text-primary hover:text-blue-400">
+                        Editar <i class="fas fa-chevron-right ml-1"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-400">
+            <i class="fas fa-box-open text-4xl mb-3"></i>
+            <p>No hay equipos registrados para esta planta</p>
+            <a href="{{ url_for('admin.equipos_nuevo', planta_id=planta.id) }}" 
+               class="inline-block mt-3 text-primary hover:text-blue-400">
+                Agregar primer equipo <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

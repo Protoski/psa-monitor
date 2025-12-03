@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Equipos - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold">
+                <i class="fas fa-cogs mr-2 text-primary"></i>
+                Gestión de Equipos
+            </h1>
+            <p class="text-gray-400 text-sm mt-1">{{ equipos|length }} equipos registrados</p>
+        </div>
+        {% if user.rol in ['admin', 'operador'] %}
+        <a href="{{ url_for('admin.equipos_nuevo') }}" 
+           class="px-4 py-2 bg-primary hover:bg-blue-600 rounded-lg transition">
+            <i class="fas fa-plus mr-2"></i> Nuevo Equipo
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-dark-800 rounded-xl p-4 mb-6">
+        <form method="GET" class="flex flex-wrap gap-4">
+            <select name="planta_id" 
+                    class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm"
+                    onchange="this.form.submit()">
+                <option value="">Todas las plantas</option>
+                {% for pid, p in plantas.items() %}
+                <option value="{{ pid }}" {% if filtro_planta == pid %}selected{% endif %}>
+                    {{ p.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <select name="tipo_equipo_id" 
+                    class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm"
+                    onchange="this.form.submit()">
+                <option value="">Todos los tipos</option>
+                {% for tipo in tipos %}
+                <option value="{{ tipo.id }}" {% if filtro_tipo == tipo.id %}selected{% endif %}>
+                    {{ tipo.icono }} {{ tipo.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <input type="text" 
+                   id="busqueda"
+                   placeholder="Buscar patrimonio, serie..."
+                   class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-sm flex-1
+                          focus:ring-2 focus:ring-primary"
+                   onkeyup="filtrarEquipos()">
+        </form>
+    </div>
+    
+    <!-- Grid de equipos -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="gridEquipos">
+        {% for equipo in equipos %}
+        <div class="bg-dark-800 rounded-xl overflow-hidden hover:ring-2 hover:ring-primary/50 transition equipo-card"
+             data-busqueda="{{ equipo.nombre|lower }} {{ equipo.numero_serie|lower if equipo.numero_serie else '' }} {{ equipo.numero_patrimonio|lower if equipo.numero_patrimonio else '' }}">
+            <!-- Header -->
+            <div class="px-4 py-3 border-b border-dark-600 flex justify-between items-start
+                        {% if equipo.estado == 'operativo' %}bg-green-500/10
+                        {% elif equipo.estado == 'standby' %}bg-blue-500/10
+                        {% elif equipo.estado == 'mantenimiento' %}bg-yellow-500/10
+                        {% else %}bg-red-500/10{% endif %}">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">{{ equipo.tipo_icono }}</span>
+                    <div>
+                        <p class="text-xs text-gray-400">{{ equipo.tipo_nombre }}</p>
+                        <h3 class="font-semibold">{{ equipo.nombre }}</h3>
+                    </div>
+                </div>
+                <span class="px-2 py-1 rounded text-xs font-medium
+                             {% if equipo.estado == 'operativo' %}bg-green-500/30 text-green-400
+                             {% elif equipo.estado == 'standby' %}bg-blue-500/30 text-blue-400
+                             {% elif equipo.estado == 'mantenimiento' %}bg-yellow-500/30 text-yellow-400
+                             {% else %}bg-red-500/30 text-red-400{% endif %}">
+                    {{ equipo.estado }}
+                </span>
+            </div>
+            
+            <!-- Info -->
+            <div class="p-4 space-y-3">
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-industry text-gray-500 w-5"></i>
+                    <a href="{{ url_for('dashboard.detalle_planta', planta_id=equipo.planta_id) }}" 
+                       class="text-primary hover:text-blue-400">
+                        {{ equipo.planta_nombre }}
+                    </a>
+                    {% if equipo.posicion > 1 %}
+                    <span class="text-xs bg-dark-600 px-1.5 py-0.5 rounded">Línea {{ equipo.posicion }}</span>
+                    {% endif %}
+                </div>
+                
+                {% if equipo.marca or equipo.modelo %}
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <i class="fas fa-tag w-5"></i>
+                    <span>{{ equipo.marca or '' }} {{ equipo.modelo or '' }}</span>
+                </div>
+                {% endif %}
+                
+                {% if equipo.numero_serie %}
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <i class="fas fa-barcode w-5"></i>
+                    <span class="font-mono">S/N: {{ equipo.numero_serie }}</span>
+                </div>
+                {% endif %}
+                
+                {% if equipo.numero_patrimonio %}
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-hashtag w-5 text-primary"></i>
+                    <span class="font-mono font-medium">{{ equipo.numero_patrimonio }}</span>
+                </div>
+                {% endif %}
+                
+                <!-- Criticidad -->
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-exclamation-circle w-5 text-gray-500"></i>
+                    <span class="px-2 py-0.5 rounded text-xs
+                                 {% if equipo.criticidad == 'critica' %}bg-red-500/20 text-red-400
+                                 {% elif equipo.criticidad == 'alta' %}bg-orange-500/20 text-orange-400
+                                 {% elif equipo.criticidad == 'media' %}bg-yellow-500/20 text-yellow-400
+                                 {% else %}bg-gray-500/20 text-gray-400{% endif %}">
+                        Criticidad: {{ equipo.criticidad }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-4 py-3 border-t border-dark-600 flex justify-between items-center text-xs text-gray-400">
+                {% if equipo.horas_operacion %}
+                <span><i class="fas fa-clock mr-1"></i> {{ equipo.horas_operacion }} h</span>
+                {% else %}
+                <span></span>
+                {% endif %}
+                
+                <div class="flex gap-2">
+                    {% if user.rol in ['admin', 'operador'] %}
+                    <a href="{{ url_for('admin.equipos_editar', equipo_id=equipo.id) }}" 
+                       class="text-primary hover:text-blue-400">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not equipos %}
+    <div class="bg-dark-800 rounded-xl p-12 text-center">
+        <i class="fas fa-cogs text-6xl text-gray-600 mb-4"></i>
+        <p class="text-gray-400 mb-4">No hay equipos registrados</p>
+        <a href="{{ url_for('admin.equipos_nuevo') }}" 
+           class="inline-block px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+            <i class="fas fa-plus mr-2"></i> Agregar Equipo
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filtrarEquipos() {
+    const busqueda = document.getElementById('busqueda').value.toLowerCase();
+    
+    document.querySelectorAll('.equipo-card').forEach(card => {
+        const datos = card.dataset.busqueda;
+        card.style.display = !busqueda || datos.includes(busqueda) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

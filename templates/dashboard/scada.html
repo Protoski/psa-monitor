@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCADA - PSA Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #0b1724; color: #fff; font-family: system-ui, sans-serif; }
+        .card { background: #111827; border-radius: 12px; padding: 20px; }
+        .alarm { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .gauge { width: 120px; height: 120px; position: relative; }
+        .gauge-value { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: bold; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-4">
+            <span class="text-3xl">🏥</span>
+            <div>
+                <h1 class="text-xl font-bold">PSA Monitor - SCADA</h1>
+                <p class="text-gray-400 text-sm">Sistema de Control y Adquisición de Datos</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="timestamp" class="text-gray-400 text-sm"></span>
+            <select id="plantaSelector" class="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm">
+                <option value="">Seleccionar planta...</option>
+            </select>
+            <a href="/dashboard" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                ← Volver
+            </a>
+        </div>
+    </header>
+    
+    <!-- Main content -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Panel izquierdo - Estado actual -->
+        <div class="lg:col-span-1 space-y-4">
+            <div class="card" id="plantaInfo">
+                <h2 class="text-lg font-bold mb-4" id="plantaNombre">Selecciona una planta</h2>
+                <div id="plantaEstado" class="text-gray-400">-</div>
+            </div>
+            
+            <!-- Métricas principales -->
+            <div class="card">
+                <h3 class="text-sm text-gray-400 mb-4">MÉTRICAS EN TIEMPO REAL</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-400" id="pureza">--</div>
+                        <div class="text-xs text-gray-400">Pureza O₂ (%)</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-400" id="flujo">--</div>
+                        <div class="text-xs text-gray-400">Flujo (Nm³/h)</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-gray-300" id="presion">--</div>
+                        <div class="text-xs text-gray-400">Presión (bar)</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-orange-400" id="temperatura">--</div>
+                        <div class="text-xs text-gray-400">Temp (°C)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Estado operativo -->
+            <div class="card">
+                <h3 class="text-sm text-gray-400 mb-4">ESTADO OPERATIVO</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span>Modo</span>
+                        <span id="modo" class="px-3 py-1 rounded bg-gray-700">--</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Horas Operación</span>
+                        <span id="horas" class="font-mono">--</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Alarma</span>
+                        <span id="alarmaEstado" class="px-3 py-1 rounded bg-gray-700">--</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Alarma activa -->
+            <div id="alarmaPanel" class="card bg-red-900/30 border border-red-500 hidden">
+                <h3 class="text-red-400 font-bold flex items-center gap-2 alarm">
+                    ⚠️ ALARMA ACTIVA
+                </h3>
+                <p id="alarmaMensaje" class="text-red-300 mt-2"></p>
+            </div>
+        </div>
+        
+        <!-- Panel central - Gráficos -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="card">
+                <h3 class="text-sm text-gray-400 mb-4">PUREZA DE O₂ - ÚLTIMAS 24 HORAS</h3>
+                <canvas id="chartPureza" height="150"></canvas>
+            </div>
+            
+            <div class="card">
+                <h3 class="text-sm text-gray-400 mb-4">FLUJO - ÚLTIMAS 24 HORAS</h3>
+                <canvas id="chartFlujo" height="150"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="card">
+                    <h3 class="text-sm text-gray-400 mb-4">PRESIÓN</h3>
+                    <canvas id="chartPresion" height="120"></canvas>
+                </div>
+                <div class="card">
+                    <h3 class="text-sm text-gray-400 mb-4">TEMPERATURA</h3>
+                    <canvas id="chartTemp" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        const API_KEY = '{{ api_key }}';
+        const plantas = {{ plantas_json | safe }};
+        
+        let chartPureza, chartFlujo, chartPresion, chartTemp;
+        let currentPlanta = null;
+        let updateInterval = null;
+        
+        // Inicializar selector de plantas
+        const selector = document.getElementById('plantaSelector');
+        Object.entries(plantas).forEach(([id, p]) => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = p.nombre;
+            selector.appendChild(opt);
+        });
+        
+        selector.addEventListener('change', (e) => {
+            if (e.target.value) {
+                cargarPlanta(e.target.value);
+            }
+        });
+        
+        // Cargar primera planta automáticamente
+        const primeraPlanta = Object.keys(plantas)[0];
+        if (primeraPlanta) {
+            selector.value = primeraPlanta;
+            cargarPlanta(primeraPlanta);
+        }
+        
+        function cargarPlanta(plantaId) {
+            currentPlanta = plantaId;
+            actualizarDatos();
+            cargarHistorial();
+            
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(actualizarDatos, 30000);
+        }
+        
+        function actualizarDatos() {
+            if (!currentPlanta) return;
+            
+            fetch(`/api/plantas/${currentPlanta}?api_key=${API_KEY}`)
+                .then(r => r.json())
+                .then(p => {
+                    document.getElementById('plantaNombre').textContent = p.nombre;
+                    document.getElementById('plantaEstado').textContent = p.ubicacion || '';
+                    
+                    document.getElementById('pureza').textContent = (p.pureza_pct || 0).toFixed(1);
+                    document.getElementById('flujo').textContent = (p.flujo_nm3h || 0).toFixed(1);
+                    document.getElementById('presion').textContent = (p.presion_bar || 0).toFixed(2);
+                    document.getElementById('temperatura').textContent = (p.temperatura_c || 0).toFixed(1);
+                    
+                    document.getElementById('modo').textContent = p.modo || 'Desconocido';
+                    document.getElementById('horas').textContent = `${p.horas_operacion || 0} h`;
+                    
+                    const alarmaEstado = document.getElementById('alarmaEstado');
+                    const alarmaPanel = document.getElementById('alarmaPanel');
+                    
+                    if (p.alarma) {
+                        alarmaEstado.textContent = 'ACTIVA';
+                        alarmaEstado.className = 'px-3 py-1 rounded bg-red-500 text-white alarm';
+                        alarmaPanel.classList.remove('hidden');
+                        document.getElementById('alarmaMensaje').textContent = p.mensaje_alarma;
+                    } else {
+                        alarmaEstado.textContent = 'Normal';
+                        alarmaEstado.className = 'px-3 py-1 rounded bg-green-500/20 text-green-400';
+                        alarmaPanel.classList.add('hidden');
+                    }
+                    
+                    // Actualizar color de pureza
+                    const purezaEl = document.getElementById('pureza');
+                    if (p.pureza_pct >= 93) {
+                        purezaEl.className = 'text-3xl font-bold text-green-400';
+                    } else if (p.pureza_pct >= 90) {
+                        purezaEl.className = 'text-3xl font-bold text-yellow-400';
+                    } else {
+                        purezaEl.className = 'text-3xl font-bold text-red-400';
+                    }
+                    
+                    document.getElementById('timestamp').textContent = 
+                        'Actualizado: ' + new Date().toLocaleTimeString('es-PY');
+                })
+                .catch(console.error);
+        }
+        
+        function cargarHistorial() {
+            if (!currentPlanta) return;
+            
+            const desde = new Date();
+            desde.setHours(desde.getHours() - 24);
+            
+            fetch(`/api/historial?planta_id=${currentPlanta}&desde=${desde.toISOString()}&api_key=${API_KEY}`)
+                .then(r => r.json())
+                .then(datos => {
+                    if (!datos.length) return;
+                    
+                    const labels = datos.map(d => {
+                        const t = new Date(d.timestamp);
+                        return t.toLocaleTimeString('es-PY', {hour: '2-digit', minute: '2-digit'});
+                    });
+                    
+                    actualizarChart('chartPureza', chartPureza, labels, 
+                        datos.map(d => d.pureza_pct), 'Pureza O₂ (%)', '#10b981', 'pureza');
+                    actualizarChart('chartFlujo', chartFlujo, labels, 
+                        datos.map(d => d.flujo_nm3h), 'Flujo (Nm³/h)', '#3b82f6', 'flujo');
+                    actualizarChart('chartPresion', chartPresion, labels, 
+                        datos.map(d => d.presion_bar), 'Presión (bar)', '#a855f7', 'presion');
+                    actualizarChart('chartTemp', chartTemp, labels, 
+                        datos.map(d => d.temperatura_c), 'Temperatura (°C)', '#f97316', 'temp');
+                })
+                .catch(console.error);
+        }
+        
+        function actualizarChart(canvasId, chartInstance, labels, data, label, color, chartVar) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (window[chartVar + 'Chart']) {
+                window[chartVar + 'Chart'].data.labels = labels;
+                window[chartVar + 'Chart'].data.datasets[0].data = data;
+                window[chartVar + 'Chart'].update();
+            } else {
+                window[chartVar + 'Chart'] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            borderColor: color,
+                            backgroundColor: color + '20',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: { color: '#374151' },
+                                ticks: { color: '#9ca3af', maxTicksLimit: 8 }
+                            },
+                            y: {
+                                display: true,
+                                grid: { color: '#374151' },
+                                ticks: { color: '#9ca3af' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Monitoreo - PSA Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold">
+                <i class="fas fa-chart-line mr-2 text-primary"></i>
+                Monitoreo en Vivo
+            </h1>
+            <p class="text-gray-400 text-sm mt-1">
+                Última actualización: <span id="ultimaActualizacion">--</span>
+            </p>
+        </div>
+        <button onclick="actualizarDatos()" 
+                class="px-4 py-2 bg-primary hover:bg-blue-600 rounded-lg transition">
+            <i class="fas fa-sync-alt mr-2"></i> Actualizar
+        </button>
+    </div>
+    
+    <!-- Estadísticas globales -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div class="bg-dark-800 rounded-xl p-4 text-center">
+            <p class="text-gray-400 text-xs uppercase">Total Plantas</p>
+            <p class="text-2xl font-bold text-white" id="statTotal">{{ stats.total_plantas }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-xl p-4 text-center">
+            <p class="text-gray-400 text-xs uppercase">Operando</p>
+            <p class="text-2xl font-bold text-green-400" id="statOperando">{{ stats.plantas_operando }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-xl p-4 text-center">
+            <p class="text-gray-400 text-xs uppercase">Mantenimiento</p>
+            <p class="text-2xl font-bold text-yellow-400" id="statMant">{{ stats.plantas_mantenimiento }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-xl p-4 text-center">
+            <p class="text-gray-400 text-xs uppercase">Con Alarma</p>
+            <p class="text-2xl font-bold text-red-400" id="statAlarma">{{ stats.plantas_alarma }}</p>
+        </div>
+        <div class="bg-dark-800 rounded-xl p-4 text-center">
+            <p class="text-gray-400 text-xs uppercase">Pureza Prom.</p>
+            <p class="text-2xl font-bold text-white" id="statPureza">{{ stats.pureza_promedio }}%</p>
+        </div>
+        <div class="bg-dark-800 rounded-xl p-4 text-center">
+            <p class="text-gray-400 text-xs uppercase">Flujo Total</p>
+            <p class="text-2xl font-bold text-white" id="statFlujo">{{ stats.flujo_total }} Nm³/h</p>
+        </div>
+    </div>
+    
+    <!-- Grid de plantas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="plantasGrid">
+        {% for planta_id, planta in plantas.items() %}
+        <div class="bg-dark-800 rounded-xl overflow-hidden hover:ring-2 hover:ring-primary/50 transition"
+             id="planta-{{ planta_id }}">
+            <!-- Header -->
+            <div class="px-4 py-3 border-b border-dark-600 flex justify-between items-center
+                        {% if planta.alarma %}bg-red-500/20
+                        {% elif planta.modo == 'Producción' %}bg-green-500/10
+                        {% elif planta.modo == 'Mantenimiento' %}bg-yellow-500/10
+                        {% else %}bg-dark-700{% endif %}">
+                <div>
+                    <h3 class="font-semibold">{{ planta.nombre }}</h3>
+                    <p class="text-xs text-gray-400">{{ planta.ubicacion }}</p>
+                </div>
+                <div class="text-right">
+                    <span class="px-2 py-1 rounded text-xs font-medium
+                                 {% if planta.modo == 'Producción' %}bg-green-500/30 text-green-400
+                                 {% elif planta.modo == 'Mantenimiento' %}bg-yellow-500/30 text-yellow-400
+                                 {% else %}bg-gray-500/30 text-gray-400{% endif %}">
+                        {{ planta.modo or 'Desconocido' }}
+                    </span>
+                    {% if planta.alarma %}
+                    <div class="text-red-400 text-xs mt-1 animate-pulse">
+                        <i class="fas fa-exclamation-triangle"></i> ALARMA
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Datos -->
+            <div class="p-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <p class="text-gray-400 text-xs">Pureza O₂</p>
+                        <p class="text-xl font-bold {% if planta.pureza_pct >= 93 %}text-green-400{% elif planta.pureza_pct >= 90 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            {{ planta.pureza_pct|default(0)|round(1) }}%
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-400 text-xs">Flujo</p>
+                        <p class="text-xl font-bold text-blue-400">
+                            {{ planta.flujo_nm3h|default(0)|round(1) }} <span class="text-sm">Nm³/h</span>
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-400 text-xs">Presión</p>
+                        <p class="text-lg font-medium text-gray-300">
+                            {{ planta.presion_bar|default(0)|round(1) }} bar
+                        </p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-400 text-xs">Temperatura</p>
+                        <p class="text-lg font-medium text-gray-300">
+                            {{ planta.temperatura_c|default(0)|round(1) }}°C
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-dark-600 flex justify-between items-center text-xs text-gray-400">
+                    <span>
+                        <i class="fas fa-clock mr-1"></i>
+                        {{ planta.horas_operacion|default(0)|int }} h
+                    </span>
+                    <a href="{{ url_for('dashboard.detalle_planta', planta_id=planta_id) }}" 
+                       class="text-primary hover:text-blue-400 transition">
+                        Ver detalles <i class="fas fa-chevron-right ml-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not plantas %}
+    <div class="bg-dark-800 rounded-xl p-12 text-center">
+        <div class="text-6xl mb-4">🏭</div>
+        <h3 class="text-xl font-semibold mb-2">No hay plantas registradas</h3>
+        <p class="text-gray-400 mb-4">Agregá tu primera planta para comenzar el monitoreo</p>
+        <a href="{{ url_for('admin.plantas_nueva') }}" 
+           class="inline-block px-6 py-3 bg-primary hover:bg-blue-600 rounded-lg transition">
+            <i class="fas fa-plus mr-2"></i> Nueva Planta
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Auto-actualizar cada 30 segundos
+    let intervalId = null;
+    
+    function actualizarDatos() {
+        fetch('/api/plantas')
+            .then(r => r.json())
+            .then(plantas => {
+                // Actualizar hora
+                document.getElementById('ultimaActualizacion').textContent = 
+                    new Date().toLocaleTimeString('es-PY');
+                
+                // Actualizar estadísticas
+                let total = 0, operando = 0, mant = 0, alarma = 0, pureza = 0, flujo = 0;
+                
+                Object.values(plantas).forEach(p => {
+                    total++;
+                    if (p.modo === 'Producción' && !p.alarma) operando++;
+                    if (p.modo === 'Mantenimiento') mant++;
+                    if (p.alarma) alarma++;
+                    pureza += p.pureza_pct || 0;
+                    flujo += p.flujo_nm3h || 0;
+                });
+                
+                document.getElementById('statTotal').textContent = total;
+                document.getElementById('statOperando').textContent = operando;
+                document.getElementById('statMant').textContent = mant;
+                document.getElementById('statAlarma').textContent = alarma;
+                document.getElementById('statPureza').textContent = (pureza / total || 0).toFixed(1) + '%';
+                document.getElementById('statFlujo').textContent = flujo.toFixed(1) + ' Nm³/h';
+                
+                console.log('Datos actualizados');
+            })
+            .catch(err => console.error('Error:', err));
+    }
+    
+    // Iniciar auto-actualización
+    document.addEventListener('DOMContentLoaded', () => {
+        actualizarDatos();
+        intervalId = setInterval(actualizarDatos, 30000);
+    });
+</script>
+{% endblock %}
