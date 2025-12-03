@@ -1,0 +1,22 @@
+# PSA Monitor - Requirements
+# Python 3.9+
+
+# Web Framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# JWT Authentication
+Flask-JWT-Extended==4.6.0
+PyJWT==2.8.0
+
+# PostgreSQL
+psycopg2-binary==2.9.9
+
+# Production Server
+gunicorn==21.2.0
+
+# Telegram Bot (opcional)
+python-telegram-bot==20.7
+
+# Utilities
+python-dotenv==1.0.0
